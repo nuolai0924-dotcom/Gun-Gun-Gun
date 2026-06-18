@@ -1,0 +1,1708 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>数字枪火</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #121318;
+      --panel: #1d2028;
+      --ink: #f7f3e8;
+      --muted: #aab0bf;
+      --line: rgba(255,255,255,.14);
+      --green: #4bd17f;
+      --red: #f36b6b;
+      --gold: #ffd166;
+      --blue: #56c2ff;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      overflow: hidden;
+      background:
+        radial-gradient(circle at 18% 12%, rgba(86,194,255,.16), transparent 28%),
+        linear-gradient(135deg, #101116 0%, #171923 45%, #22201c 100%);
+      color: var(--ink);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    button {
+      border: 0;
+      color: inherit;
+      font: inherit;
+      cursor: pointer;
+    }
+
+    .shell {
+      min-height: 100vh;
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 300px;
+      gap: 16px;
+      padding: 16px;
+    }
+
+    .stage {
+      position: relative;
+      min-height: calc(100vh - 32px);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      overflow: hidden;
+      background: #181a21;
+      box-shadow: 0 20px 70px rgba(0,0,0,.35);
+    }
+
+    canvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+      min-height: calc(100vh - 34px);
+      touch-action: none;
+    }
+
+    .hud {
+      position: absolute;
+      inset: 14px 14px auto 14px;
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 10px;
+      pointer-events: none;
+    }
+
+    .stats {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      min-width: 0;
+    }
+
+    .pill {
+      min-width: 86px;
+      padding: 7px 10px;
+      border: 1px solid rgba(255,255,255,.18);
+      border-radius: 8px;
+      background: rgba(17,18,24,.72);
+      backdrop-filter: blur(12px);
+      box-shadow: 0 8px 24px rgba(0,0,0,.22);
+    }
+
+    .pill b {
+      display: block;
+      font-size: 18px;
+      line-height: 1.05;
+      letter-spacing: 0;
+    }
+
+    .pill span {
+      display: block;
+      margin-top: 2px;
+      color: var(--muted);
+      font-size: 11px;
+      white-space: nowrap;
+    }
+
+    .pause {
+      width: 42px;
+      height: 42px;
+      border-radius: 8px;
+      background: rgba(17,18,24,.78);
+      border: 1px solid rgba(255,255,255,.18);
+      display: grid;
+      place-items: center;
+      pointer-events: auto;
+    }
+
+    .pause::before {
+      content: "";
+      width: 14px;
+      height: 16px;
+      border-left: 5px solid var(--ink);
+      border-right: 5px solid var(--ink);
+    }
+
+    .side {
+      min-height: calc(100vh - 32px);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: rgba(20,22,29,.84);
+      backdrop-filter: blur(18px);
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      overflow: auto;
+    }
+
+    .brand h1 {
+      margin: 0;
+      font-size: clamp(28px, 4vw, 44px);
+      line-height: .96;
+      letter-spacing: 0;
+    }
+
+    .brand p {
+      margin: 8px 0 0;
+      color: var(--muted);
+      font-size: 14px;
+      line-height: 1.5;
+    }
+
+    .upgrade {
+      padding: 12px;
+      border: 1px solid rgba(255,255,255,.12);
+      border-radius: 8px;
+      background: rgba(255,255,255,.045);
+    }
+
+    .upgrade header {
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+      align-items: center;
+      margin-bottom: 10px;
+    }
+
+    .upgrade strong {
+      font-size: 15px;
+    }
+
+    .upgrade small {
+      color: var(--gold);
+      font-weight: 800;
+      white-space: nowrap;
+    }
+
+    .upgrade button,
+    .primary {
+      width: 100%;
+      min-height: 42px;
+      border-radius: 8px;
+      background: #f4f0df;
+      color: #171717;
+      font-weight: 900;
+      box-shadow: 0 8px 0 rgba(0,0,0,.2);
+    }
+
+    .upgrade button:disabled {
+      opacity: .42;
+      cursor: not-allowed;
+      box-shadow: none;
+    }
+
+    .meter {
+      height: 6px;
+      border-radius: 999px;
+      overflow: hidden;
+      background: rgba(255,255,255,.1);
+      margin: 8px 0 10px;
+    }
+
+    .meter i {
+      display: block;
+      height: 100%;
+      width: 30%;
+      background: linear-gradient(90deg, var(--blue), var(--green));
+    }
+
+    .kbd {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+      margin-top: auto;
+    }
+
+    .key {
+      min-height: 42px;
+      border: 1px solid rgba(255,255,255,.14);
+      border-radius: 8px;
+      display: grid;
+      place-items: center;
+      color: var(--muted);
+      background: rgba(255,255,255,.04);
+      font-weight: 800;
+    }
+
+    .overlay {
+      position: absolute;
+      inset: 0;
+      display: grid;
+      place-items: center;
+      padding: 24px;
+      background: rgba(12,13,17,.64);
+      backdrop-filter: blur(8px);
+      z-index: 3;
+    }
+
+    .dialog {
+      width: min(420px, 100%);
+      border: 1px solid rgba(255,255,255,.16);
+      border-radius: 8px;
+      background: rgba(28,30,39,.95);
+      padding: 22px;
+      box-shadow: 0 20px 70px rgba(0,0,0,.42);
+      text-align: center;
+    }
+
+    .dialog h2 {
+      margin: 0;
+      font-size: 36px;
+      line-height: 1;
+      letter-spacing: 0;
+    }
+
+    .dialog p {
+      color: var(--muted);
+      line-height: 1.55;
+      margin: 12px 0 18px;
+    }
+
+    .math-panel {
+      position: absolute;
+      left: 14px;
+      right: 14px;
+      bottom: 14px;
+      z-index: 2;
+      display: grid;
+      grid-template-columns: minmax(160px, 1fr) 120px 96px;
+      gap: 10px;
+      align-items: center;
+      padding: 12px;
+      border: 1px solid rgba(255,255,255,.16);
+      border-radius: 8px;
+      background: rgba(17,18,24,.82);
+      backdrop-filter: blur(12px);
+      box-shadow: 0 12px 40px rgba(0,0,0,.34);
+    }
+
+    .math-panel b {
+      font-size: 20px;
+      letter-spacing: 0;
+    }
+
+    .math-panel small {
+      color: var(--muted);
+      font-weight: 700;
+    }
+
+    .math-panel input {
+      width: 100%;
+      min-height: 42px;
+      border: 1px solid rgba(255,255,255,.18);
+      border-radius: 8px;
+      background: rgba(255,255,255,.08);
+      color: var(--ink);
+      font: inherit;
+      font-weight: 900;
+      text-align: center;
+      outline: 0;
+    }
+
+    .math-panel button {
+      min-height: 42px;
+      border-radius: 8px;
+      background: var(--gold);
+      color: #171717;
+      font-weight: 900;
+    }
+
+    .math-feedback {
+      grid-column: 1 / -1;
+      min-height: 16px;
+      color: var(--muted);
+      font-size: 13px;
+      font-weight: 800;
+    }
+
+    .hidden {
+      display: none;
+    }
+
+    @media (max-width: 900px) {
+      body {
+        overflow: auto;
+      }
+
+      .shell {
+        min-height: 100vh;
+        grid-template-columns: 1fr;
+        padding: 10px;
+      }
+
+      .stage,
+      .side {
+        min-height: auto;
+      }
+
+      canvas {
+        height: 68vh;
+        min-height: 520px;
+      }
+
+      .side {
+        max-height: none;
+      }
+
+      .brand h1 {
+        font-size: 32px;
+      }
+
+      .math-panel {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    @media (max-width: 520px) {
+      .hud {
+        inset: 10px 10px auto 10px;
+      }
+
+      .pill {
+        min-width: 72px;
+        padding: 6px 8px;
+      }
+
+      .pill b {
+        font-size: 15px;
+      }
+
+      canvas {
+        min-height: 480px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="shell">
+    <section class="stage" aria-label="游戏画面">
+      <canvas id="game"></canvas>
+      <div class="hud">
+        <div class="stats">
+          <div class="pill"><b id="power">1</b><span>最终子弹</span></div>
+          <div class="pill"><b id="ammo">0</b><span>当前子弹</span></div>
+          <div class="pill"><b id="life">100</b><span>生命值</span></div>
+          <div class="pill"><b id="coins">0</b><span>金币</span></div>
+          <div class="pill"><b id="level">1</b><span>关卡</span></div>
+          <div class="pill"><b id="boss">0</b><span>怪物血量</span></div>
+        </div>
+        <button id="pause" class="pause" title="暂停" aria-label="暂停"></button>
+      </div>
+      <div id="overlay" class="overlay">
+        <div class="dialog">
+          <h2 id="overlayTitle">数字枪火</h2>
+          <p id="overlayText">左右移动选择数学门。最终数字会四舍五入成子弹数，最多 50 发；Boss 战要答题补弹、瞄准移动怪物射击。</p>
+          <button id="start" class="primary">开始</button>
+        </div>
+      </div>
+      <form id="mathPanel" class="math-panel hidden">
+        <div>
+          <b id="question">36 ÷ 4 = ?</b>
+          <small>答对获得 10 发子弹，答错扣 10 生命值</small>
+        </div>
+        <input id="answer" inputmode="decimal" autocomplete="off" aria-label="答案" placeholder="答案">
+        <button id="submitAnswer" type="submit">提交</button>
+        <div id="mathFeedback" class="math-feedback"></div>
+      </form>
+    </section>
+
+    <aside class="side" aria-label="升级面板">
+      <div class="brand">
+        <h1>数字枪火</h1>
+        <p>跑酷、选门、答题、瞄准射击。最终数字会变成子弹数，小数会四舍五入。</p>
+      </div>
+
+      <div class="upgrade">
+        <header>
+          <strong>枪管数量</strong>
+          <small id="barrelCost">12 金币</small>
+        </header>
+        <div class="meter"><i id="barrelMeter"></i></div>
+        <button id="buyBarrel">升级</button>
+      </div>
+
+      <div class="upgrade">
+        <header>
+          <strong>子弹伤害</strong>
+          <small id="damageCost">10 金币</small>
+        </header>
+        <div class="meter"><i id="damageMeter"></i></div>
+        <button id="buyDamage">升级</button>
+      </div>
+
+      <div class="upgrade">
+        <header>
+          <strong>射击速度</strong>
+          <small id="rateCost">14 金币</small>
+        </header>
+        <div class="meter"><i id="rateMeter"></i></div>
+        <button id="buyRate">升级</button>
+      </div>
+
+      <div class="kbd" aria-hidden="true">
+        <div class="key">A</div>
+        <div class="key">拖动</div>
+        <div class="key">D</div>
+      </div>
+    </aside>
+  </main>
+
+  <script>
+    const canvas = document.getElementById("game");
+    const ctx = canvas.getContext("2d");
+    const ui = {
+      power: document.getElementById("power"),
+      ammo: document.getElementById("ammo"),
+      life: document.getElementById("life"),
+      coins: document.getElementById("coins"),
+      level: document.getElementById("level"),
+      boss: document.getElementById("boss"),
+      mathPanel: document.getElementById("mathPanel"),
+      question: document.getElementById("question"),
+      answer: document.getElementById("answer"),
+      mathFeedback: document.getElementById("mathFeedback"),
+      overlay: document.getElementById("overlay"),
+      overlayTitle: document.getElementById("overlayTitle"),
+      overlayText: document.getElementById("overlayText"),
+      start: document.getElementById("start"),
+      pause: document.getElementById("pause"),
+      buyBarrel: document.getElementById("buyBarrel"),
+      buyDamage: document.getElementById("buyDamage"),
+      buyRate: document.getElementById("buyRate"),
+      barrelCost: document.getElementById("barrelCost"),
+      damageCost: document.getElementById("damageCost"),
+      rateCost: document.getElementById("rateCost"),
+      barrelMeter: document.getElementById("barrelMeter"),
+      damageMeter: document.getElementById("damageMeter"),
+      rateMeter: document.getElementById("rateMeter")
+    };
+
+    const DPR = Math.max(1, Math.min(2, window.devicePixelRatio || 1));
+    const VIEW_DEPTH = 1200;
+    const keys = new Set();
+    const state = {
+      running: false,
+      paused: false,
+      mode: "menu",
+      level: 1,
+      coins: 0,
+      totalCoins: 0,
+      power: 1,
+      ammo: 0,
+      life: 100,
+      playerX: 0,
+      targetX: 0,
+      distance: 0,
+      speed: 220,
+      bossHp: 0,
+      bossMax: 0,
+      bossKind: "kong",
+      bossName: "金刚",
+      cityTheme: "night",
+      bossX: 0,
+      bossY: 0,
+      bossVx: 90,
+      bossVy: 55,
+      aimX: 0,
+      aimY: 0,
+      question: null,
+      hardQuestions: false,
+      shotTimer: 0,
+      lastTime: 0,
+      particles: [],
+      bullets: [],
+      gates: [],
+      popups: [],
+      upgrades: {
+        barrels: 1,
+        damage: 1,
+        rate: 1
+      }
+    };
+
+    const costs = {
+      barrels: () => Math.floor(12 * Math.pow(1.55, state.upgrades.barrels - 1)),
+      damage: () => Math.floor(10 * Math.pow(1.5, state.upgrades.damage - 1)),
+      rate: () => Math.floor(14 * Math.pow(1.45, state.upgrades.rate - 1))
+    };
+
+    let view = { w: 1, h: 1, roadW: 1, roadX: 0, horizon: 0, finishY: 0 };
+
+    function resize() {
+      const rect = canvas.getBoundingClientRect();
+      canvas.width = Math.floor(rect.width * DPR);
+      canvas.height = Math.floor(rect.height * DPR);
+      ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+      view.w = rect.width;
+      view.h = rect.height;
+      view.roadW = Math.min(520, view.w * 0.72);
+      view.roadX = (view.w - view.roadW) / 2;
+      view.horizon = view.h * 0.08;
+      view.finishY = view.h * 0.24;
+      if (!state.running) {
+        state.playerX = view.w / 2;
+        state.targetX = state.playerX;
+      }
+    }
+
+    function rand(min, max) {
+      return Math.random() * (max - min) + min;
+    }
+
+    function snap(value, step = .5) {
+      return Math.round(value / step) * step;
+    }
+
+    function fmt(value) {
+      const fixed = Math.round(value * 10) / 10;
+      return Number.isInteger(fixed) ? String(fixed) : fixed.toFixed(1);
+    }
+
+    function bulletCount(value) {
+      return Math.max(1, Math.min(50, Math.round(value)));
+    }
+
+    function opText(op) {
+      if (op.type === "mul") return `x${fmt(op.value)}`;
+      if (op.type === "div") return `÷${fmt(op.value)}`;
+      if (op.type === "add") return `+${fmt(op.value)}`;
+      return `-${fmt(op.value)}`;
+    }
+
+    function opColor(op) {
+      if (op.type === "mul") return "#4bd17f";
+      if (op.type === "add") return "#56c2ff";
+      if (op.type === "div") return "#b08cff";
+      return "#f36b6b";
+    }
+
+    function bossForLevel(level) {
+      const bosses = [
+        { kind: "kong", name: "金刚", hp: 1 },
+        { kind: "godzilla", name: "哥斯拉", hp: 1.18 },
+        { kind: "mecha", name: "机械哥斯拉", hp: 1.35 }
+      ];
+      return bosses[(level - 1) % bosses.length];
+    }
+
+    function generateQuestion() {
+      if (state.hardQuestions) return generateEquationQuestion();
+      const type = Math.floor(Math.random() * 4);
+      let a;
+      let b;
+      let answer;
+      let text;
+      if (type === 0) {
+        a = Math.floor(rand(120, 900));
+        b = Math.floor(rand(80, 700));
+        answer = a + b;
+        text = `${a} + ${b} = ?`;
+      } else if (type === 1) {
+        a = Math.floor(rand(300, 1000));
+        b = Math.floor(rand(80, a - 20));
+        answer = a - b;
+        text = `${a} - ${b} = ?`;
+      } else if (type === 2) {
+        a = Math.floor(rand(12, 99));
+        b = Math.floor(rand(3, 12));
+        answer = a * b;
+        text = `${a} x ${b} = ?`;
+      } else {
+        b = Math.floor(rand(3, 12));
+        answer = Math.floor(rand(12, 81));
+        a = answer * b;
+        text = `${a} ÷ ${b} = ?`;
+      }
+      return { text, answer };
+    }
+
+    function generateEquationQuestion() {
+      const type = Math.floor(Math.random() * 3);
+      const x = Math.floor(rand(3, 25));
+      let a;
+      let b;
+      let c;
+      let text;
+      if (type === 0) {
+        a = Math.floor(rand(2, 10));
+        b = Math.floor(rand(4, 35));
+        c = a * x + b;
+        text = `${a}x + ${b} = ${c}，x = ?`;
+      } else if (type === 1) {
+        a = Math.floor(rand(2, 10));
+        b = Math.floor(rand(3, Math.max(4, a * x - 1)));
+        c = a * x - b;
+        text = `${a}x - ${b} = ${c}，x = ?`;
+      } else {
+        b = Math.floor(rand(5, 30));
+        c = x + b;
+        text = `x + ${b} = ${c}，x = ?`;
+      }
+      return { text, answer: x };
+    }
+
+    function healBoss(amount) {
+      const healed = state.bossHp + amount;
+      if (healed > state.bossMax) {
+        const overflow = healed - state.bossMax;
+        state.bossMax += overflow;
+        state.bossHp = state.bossMax;
+      } else {
+        state.bossHp = healed;
+      }
+      state.popups.push({ x: state.bossX, y: state.bossY - 70, text: `+${amount} 血`, color: "#4bd17f", life: 1, dy: -36 });
+    }
+
+    function triggerHardQuestions() {
+      if (state.hardQuestions) return;
+      state.hardQuestions = true;
+      healBoss(100);
+      ui.mathFeedback.textContent = "子弹满了，题目升级为解方程，怪物回复 100 血。";
+    }
+
+    function showQuestion(message = "") {
+      state.question = generateQuestion();
+      ui.question.textContent = state.question.text;
+      ui.answer.value = "";
+      ui.mathFeedback.textContent = message;
+      ui.mathPanel.classList.remove("hidden");
+    }
+
+    function hideQuestion() {
+      ui.mathPanel.classList.add("hidden");
+    }
+
+    function speakVictory() {
+      if (!("speechSynthesis" in window)) return;
+      window.speechSynthesis.cancel();
+      const utterance = new SpeechSynthesisUtterance("胜利！你打败了怪物！");
+      utterance.lang = "zh-CN";
+      utterance.rate = .95;
+      window.speechSynthesis.speak(utterance);
+    }
+
+    function speakLoser() {
+      if (!("speechSynthesis" in window)) return;
+      window.speechSynthesis.cancel();
+      const utterance = new SpeechSynthesisUtterance("哈哈哈 loser");
+      utterance.lang = "zh-CN";
+      utterance.rate = .85;
+      utterance.pitch = .75;
+      window.speechSynthesis.speak(utterance);
+    }
+
+    let audioCtx = null;
+
+    function getAudio() {
+      const AudioCtor = window.AudioContext || window.webkitAudioContext;
+      if (!AudioCtor) return null;
+      if (!audioCtx) audioCtx = new AudioCtor();
+      if (audioCtx.state === "suspended") audioCtx.resume();
+      return audioCtx;
+    }
+
+    function tone(freq, duration, type = "sine", volume = .08, delay = 0) {
+      const audio = getAudio();
+      if (!audio) return;
+      const now = audio.currentTime + delay;
+      const osc = audio.createOscillator();
+      const gain = audio.createGain();
+      osc.type = type;
+      osc.frequency.setValueAtTime(freq, now);
+      gain.gain.setValueAtTime(0, now);
+      gain.gain.linearRampToValueAtTime(volume, now + .01);
+      gain.gain.exponentialRampToValueAtTime(.001, now + duration);
+      osc.connect(gain);
+      gain.connect(audio.destination);
+      osc.start(now);
+      osc.stop(now + duration + .03);
+    }
+
+    function noiseBurst(duration = .18, volume = .16, delay = 0) {
+      const audio = getAudio();
+      if (!audio) return;
+      const sampleRate = audio.sampleRate;
+      const buffer = audio.createBuffer(1, sampleRate * duration, sampleRate);
+      const data = buffer.getChannelData(0);
+      for (let i = 0; i < data.length; i += 1) {
+        const fade = 1 - i / data.length;
+        data[i] = (Math.random() * 2 - 1) * fade;
+      }
+      const source = audio.createBufferSource();
+      const filter = audio.createBiquadFilter();
+      const gain = audio.createGain();
+      const now = audio.currentTime + delay;
+      filter.type = "lowpass";
+      filter.frequency.setValueAtTime(1200, now);
+      filter.frequency.exponentialRampToValueAtTime(180, now + duration);
+      gain.gain.setValueAtTime(0, now);
+      gain.gain.linearRampToValueAtTime(volume, now + .006);
+      gain.gain.exponentialRampToValueAtTime(.001, now + duration);
+      source.buffer = buffer;
+      source.connect(filter);
+      filter.connect(gain);
+      gain.connect(audio.destination);
+      source.start(now);
+      source.stop(now + duration + .02);
+    }
+
+    function playGateSound(type) {
+      if (type === "add") {
+        tone(560, .08, "sine", .08);
+        tone(760, .09, "sine", .07, .07);
+      } else if (type === "sub") {
+        tone(360, .08, "triangle", .08);
+        tone(220, .12, "triangle", .07, .06);
+      } else if (type === "mul") {
+        tone(430, .07, "square", .055);
+        tone(650, .07, "square", .05, .055);
+        tone(920, .09, "square", .045, .11);
+      } else if (type === "div") {
+        tone(700, .07, "sawtooth", .045);
+        tone(470, .07, "sawtooth", .045, .055);
+        tone(310, .1, "sawtooth", .04, .11);
+      }
+    }
+
+    function playShootSound() {
+      noiseBurst(.22, .2);
+      tone(70, .16, "sawtooth", .13);
+      tone(46, .18, "square", .09, .025);
+      tone(180, .045, "triangle", .08, .03);
+    }
+
+    function choosePair(index) {
+      const levelBoost = Math.min(8, state.level * .45);
+      const multA = snap(rand(1.4, 2.8 + Math.min(1.2, state.level * .08)), .1);
+      const multB = snap(rand(1.2, 2.4 + Math.min(1, state.level * .07)), .1);
+      const divA = snap(rand(1.3, 2.8), .1);
+      const divB = snap(rand(1.5, 3.5), .1);
+      const addA = snap(rand(2.5, 8.5 + levelBoost), .5);
+      const addB = snap(rand(1.5, 7.5 + levelBoost), .5);
+      const subA = snap(rand(1.5, 7.5 + levelBoost), .5);
+      const subB = snap(rand(2.5, 9.5 + levelBoost), .5);
+      const patterns = [
+        [{ type: "mul", value: multA }, { type: "sub", value: subA }],
+        [{ type: "add", value: addA }, { type: "div", value: divA }],
+        [{ type: "sub", value: subB }, { type: "mul", value: multB }],
+        [{ type: "div", value: divB }, { type: "add", value: addB }],
+        [{ type: "mul", value: 1.5 }, { type: "add", value: addA }],
+        [{ type: "sub", value: subA }, { type: "div", value: 2 }]
+      ];
+      return patterns[(index + state.level + Math.floor(Math.random() * patterns.length)) % patterns.length];
+    }
+
+    function buildLevel() {
+      state.distance = 0;
+      state.power = Math.max(1, state.upgrades.barrels);
+      state.ammo = 0;
+      state.life = 100;
+      state.playerX = view.w / 2;
+      state.targetX = state.playerX;
+      state.aimX = view.w / 2;
+      state.aimY = view.h * .34;
+      state.hardQuestions = false;
+      state.bullets = [];
+      state.particles = [];
+      state.popups = [];
+      state.gates = [];
+      hideQuestion();
+      state.mode = "run";
+      const boss = bossForLevel(state.level);
+      state.bossKind = boss.kind;
+      state.bossName = boss.name;
+      state.cityTheme = ["night", "sunset", "rain"][Math.floor(Math.random() * 3)];
+      state.bossMax = 1000;
+      state.bossHp = state.bossMax;
+      state.bossX = view.w / 2;
+      state.bossY = view.h * .28;
+      state.bossVx = 90;
+      state.bossVy = 55;
+      const gateCount = Math.min(8, 4 + Math.floor(state.level / 2));
+      for (let i = 0; i < gateCount; i += 1) {
+        const pair = choosePair(i);
+        state.gates.push({
+          z: 760 + i * 360,
+          hit: false,
+          options: pair.map((op, lane) => ({ ...op, lane }))
+        });
+      }
+      state.finishAt = 760 + gateCount * 360 + 420;
+      state.speed = 215 + Math.min(90, state.level * 8);
+      syncUi();
+    }
+
+    function startGame() {
+      getAudio();
+      ui.overlay.classList.add("hidden");
+      state.running = true;
+      state.paused = false;
+      buildLevel();
+      state.lastTime = performance.now();
+      requestAnimationFrame(loop);
+    }
+
+    function pauseGame() {
+      if (!state.running) return;
+      state.paused = !state.paused;
+      if (state.paused) {
+        ui.overlayTitle.textContent = "暂停";
+        ui.overlayText.textContent = "升级仍然可用。再次点击继续跑。";
+        ui.start.textContent = "继续";
+        ui.overlay.classList.remove("hidden");
+      } else {
+        ui.overlay.classList.add("hidden");
+        state.lastTime = performance.now();
+        requestAnimationFrame(loop);
+      }
+    }
+
+    function completeLevel(won) {
+      const reward = won ? 18 + state.level * 6 + Math.floor(bulletCount(state.power) / 2) : 6 + Math.floor(state.level * 2);
+      state.coins += reward;
+      state.totalCoins += reward;
+      state.level += won ? 1 : 0;
+      state.running = false;
+      state.mode = "menu";
+      hideQuestion();
+      ui.overlayTitle.textContent = won ? "恭喜你获胜了！" : "太菜了这都赢不了";
+      ui.overlayText.textContent = won
+        ? `获得 ${reward} 金币。胜利语音已经播放，下一关的泰坦更厚。`
+        : `获得 ${reward} 安慰金币。答题补弹，再瞄准移动的怪物。`;
+      ui.start.textContent = won ? "下一关" : "再来";
+      ui.overlay.classList.remove("hidden");
+      if (won) speakVictory();
+      else speakLoser();
+      syncUi();
+    }
+
+    function applyGate(op, x, y) {
+      const before = state.power;
+      playGateSound(op.type);
+      if (op.type === "mul") {
+        state.power = Math.min(999, state.power * op.value);
+      } else if (op.type === "div") {
+        state.power = Math.max(1, state.power / op.value);
+      } else if (op.type === "add") {
+        state.power = Math.min(999, state.power + op.value);
+      } else {
+        state.power = Math.max(1, state.power - op.value);
+      }
+      state.power = Math.round(state.power * 10) / 10;
+      const delta = state.power - before;
+      const color = opColor(op);
+      state.popups.push({
+        x,
+        y,
+        text: opText(op),
+        color,
+        life: 1,
+        dy: -46
+      });
+      burst(x, y, color, Math.abs(delta) + 8);
+      syncUi();
+    }
+
+    function burst(x, y, color, amount) {
+      const count = Math.max(10, Math.min(34, amount));
+      for (let i = 0; i < count; i += 1) {
+        state.particles.push({
+          x,
+          y,
+          vx: rand(-120, 120),
+          vy: rand(-150, 70),
+          r: rand(2, 5),
+          color,
+          life: rand(.35, .75)
+        });
+      }
+    }
+
+    function roadScale(z) {
+      const depth = Math.max(1, z - state.distance);
+      const t = 1 - Math.min(1, depth / VIEW_DEPTH);
+      return .24 + t * .88;
+    }
+
+    function roadY(z) {
+      const depth = Math.max(1, z - state.distance);
+      const t = 1 - Math.min(1, depth / VIEW_DEPTH);
+      return view.horizon + t * (view.h * .82);
+    }
+
+    function laneX(lane, scale = 1) {
+      const center = view.w / 2;
+      const gap = view.roadW * .23 * scale;
+      return lane === 0 ? center - gap : center + gap;
+    }
+
+    function update(dt) {
+      if (state.mode === "run") {
+        let input = 0;
+        if (keys.has("a") || keys.has("arrowleft")) input -= 1;
+        if (keys.has("d") || keys.has("arrowright")) input += 1;
+        if (input) state.targetX += input * 430 * dt;
+        const minX = view.roadX + 54;
+        const maxX = view.roadX + view.roadW - 54;
+        state.targetX = Math.max(minX, Math.min(maxX, state.targetX));
+        state.playerX += (state.targetX - state.playerX) * Math.min(1, dt * 10);
+        state.distance += state.speed * dt;
+
+        for (const gate of state.gates) {
+          const y = roadY(gate.z);
+          if (!gate.hit && y > view.h * .71) {
+            gate.hit = true;
+            const pickedLane = state.playerX < view.w / 2 ? 0 : 1;
+            const op = gate.options[pickedLane];
+            applyGate(op, laneX(pickedLane, roadScale(gate.z)), y);
+          }
+        }
+
+        if (state.distance >= state.finishAt) {
+          state.mode = "boss";
+          state.ammo = bulletCount(state.power);
+          state.power = state.ammo;
+          state.popups.push({ x: view.w / 2, y: view.h * .42, text: `${state.ammo} 发`, color: "#ffd166", life: 1, dy: -35 });
+          showQuestion("点击怪物射击，答题可以补充 10 发子弹。");
+          syncUi();
+        }
+      } else if (state.mode === "boss") {
+        moveBoss(dt);
+        if (state.bossHp <= 0) completeLevel(true);
+        if (state.life <= 0) completeLevel(false);
+      }
+
+      for (const bullet of state.bullets) {
+        bullet.life -= dt * 3.4;
+        if (bullet.life <= 0 && !bullet.done) {
+          bullet.done = true;
+          const dx = bullet.tx - state.bossX;
+          const dy = bullet.ty - state.bossY;
+          const hit = Math.hypot(dx, dy) < 78;
+          if (hit) {
+            state.bossHp = Math.max(0, state.bossHp - bullet.damage);
+            burst(bullet.tx, bullet.ty, "#ffd166", 16);
+            state.popups.push({ x: bullet.tx, y: bullet.ty, text: "命中", color: "#ffd166", life: .75, dy: -35 });
+          } else {
+            burst(bullet.tx, bullet.ty, "#f36b6b", 8);
+            state.popups.push({ x: bullet.tx, y: bullet.ty, text: "偏了", color: "#f36b6b", life: .65, dy: -30 });
+          }
+          syncUi();
+        }
+      }
+      state.bullets = state.bullets.filter(b => b.life > -.08);
+
+      for (const p of state.particles) {
+        p.life -= dt;
+        p.x += p.vx * dt;
+        p.y += p.vy * dt;
+        p.vy += 320 * dt;
+      }
+      state.particles = state.particles.filter(p => p.life > 0);
+
+      for (const pop of state.popups) {
+        pop.life -= dt;
+        pop.y += pop.dy * dt;
+      }
+      state.popups = state.popups.filter(p => p.life > 0);
+
+      if (state.mode === "boss") state.distance += state.speed * .2 * dt;
+    }
+
+    function moveBoss(dt) {
+      const minX = state.mode === "boss" ? 90 : view.roadX + 80;
+      const maxX = state.mode === "boss" ? view.w - 90 : view.roadX + view.roadW - 80;
+      const minY = state.mode === "boss" ? view.h * .13 : view.h * .18;
+      const maxY = state.mode === "boss" ? view.h * .52 : view.h * .43;
+      const speedBoost = state.bossHp <= 250 ? 1.75 : state.bossHp <= 500 ? 1.35 : 1;
+      state.bossX += state.bossVx * speedBoost * dt;
+      state.bossY += state.bossVy * speedBoost * dt;
+      if (state.bossX < minX || state.bossX > maxX) {
+        state.bossX = Math.max(minX, Math.min(maxX, state.bossX));
+        state.bossVx *= -1;
+      }
+      if (state.bossY < minY || state.bossY > maxY) {
+        state.bossY = Math.max(minY, Math.min(maxY, state.bossY));
+        state.bossVy *= -1;
+      }
+    }
+
+    function drawRoad() {
+      if (state.mode === "boss") {
+        drawCityBattlefield();
+        return;
+      }
+      const g = ctx.createLinearGradient(0, 0, 0, view.h);
+      g.addColorStop(0, "#242838");
+      g.addColorStop(.56, "#34313a");
+      g.addColorStop(1, "#4c3d34");
+      ctx.fillStyle = g;
+      ctx.fillRect(0, 0, view.w, view.h);
+
+      ctx.fillStyle = "#272a31";
+      ctx.beginPath();
+      ctx.moveTo(view.w / 2 - view.roadW * .15, view.horizon);
+      ctx.lineTo(view.w / 2 + view.roadW * .15, view.horizon);
+      ctx.lineTo(view.roadX + view.roadW, view.h);
+      ctx.lineTo(view.roadX, view.h);
+      ctx.closePath();
+      ctx.fill();
+
+      ctx.strokeStyle = "rgba(255,255,255,.2)";
+      ctx.lineWidth = 2;
+      for (let i = 0; i < 14; i += 1) {
+        const z = state.distance + i * 170;
+        const y = roadY(z);
+        const s = roadScale(z);
+        ctx.beginPath();
+        ctx.moveTo(view.w / 2 - view.roadW * .34 * s, y);
+        ctx.lineTo(view.w / 2 + view.roadW * .34 * s, y);
+        ctx.stroke();
+      }
+
+      ctx.strokeStyle = "rgba(255,255,255,.18)";
+      ctx.setLineDash([14, 18]);
+      ctx.beginPath();
+      ctx.moveTo(view.w / 2, view.horizon);
+      ctx.lineTo(view.w / 2, view.h);
+      ctx.stroke();
+      ctx.setLineDash([]);
+    }
+
+    function drawCityBattlefield() {
+      const sky = ctx.createLinearGradient(0, 0, 0, view.h);
+      if (state.cityTheme === "sunset") {
+        sky.addColorStop(0, "#372743");
+        sky.addColorStop(.46, "#b35b51");
+        sky.addColorStop(1, "#29252f");
+      } else if (state.cityTheme === "rain") {
+        sky.addColorStop(0, "#111927");
+        sky.addColorStop(.5, "#203245");
+        sky.addColorStop(1, "#161a23");
+      } else {
+        sky.addColorStop(0, "#101521");
+        sky.addColorStop(.55, "#1d2230");
+        sky.addColorStop(1, "#241f24");
+      }
+      ctx.fillStyle = sky;
+      ctx.fillRect(0, 0, view.w, view.h);
+
+      if (state.cityTheme === "sunset") {
+        ctx.fillStyle = "rgba(255,209,102,.5)";
+        ctx.beginPath();
+        ctx.arc(view.w * .76, view.h * .2, 54, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      drawBuildings(.42, .55, "rgba(11,14,20,.78)", 22);
+      drawBuildings(.58, .75, "rgba(14,17,24,.92)", 34);
+
+      const street = ctx.createLinearGradient(0, view.h * .62, 0, view.h);
+      street.addColorStop(0, "#222936");
+      street.addColorStop(.58, "#16191f");
+      street.addColorStop(1, "#0e1014");
+      ctx.fillStyle = street;
+      ctx.fillRect(0, view.h * .62, view.w, view.h * .38);
+
+      ctx.strokeStyle = "rgba(255,209,102,.22)";
+      ctx.lineWidth = 3;
+      for (let i = 0; i < 6; i += 1) {
+        const y = view.h * .7 + i * 38;
+        ctx.beginPath();
+        ctx.moveTo(view.w * .35 - i * 32, y);
+        ctx.lineTo(view.w * .65 + i * 32, y);
+        ctx.stroke();
+      }
+
+      if (state.cityTheme === "rain") {
+        ctx.strokeStyle = "rgba(180,220,255,.28)";
+        ctx.lineWidth = 1;
+        for (let i = 0; i < 80; i += 1) {
+          const x = (i * 53 + state.distance * .7) % (view.w + 80) - 40;
+          const y = (i * 31 + state.distance * 1.3) % view.h;
+          ctx.beginPath();
+          ctx.moveTo(x, y);
+          ctx.lineTo(x - 14, y + 32);
+          ctx.stroke();
+        }
+      }
+    }
+
+    function drawBuildings(topRatio, bottomRatio, color, offset) {
+      const top = view.h * topRatio;
+      const bottom = view.h * bottomRatio;
+      ctx.fillStyle = color;
+      let x = -60;
+      let i = 0;
+      while (x < view.w + 80) {
+        const w = 46 + ((i * 23 + offset) % 42);
+        const h = 80 + ((i * 37 + offset) % 135);
+        const y = bottom - h;
+        roundRect(x, y, w, h, 3);
+        ctx.fill();
+
+        const lit = state.cityTheme === "rain" ? "#8fd6ff" : state.cityTheme === "sunset" ? "#ffd166" : "#56c2ff";
+        ctx.fillStyle = lit;
+        ctx.globalAlpha = .28;
+        for (let wy = y + 14; wy < bottom - 12; wy += 20) {
+          for (let wx = x + 10; wx < x + w - 8; wx += 18) {
+            if ((Math.floor(wx + wy + offset) % 3) !== 0) ctx.fillRect(wx, wy, 7, 9);
+          }
+        }
+        ctx.globalAlpha = 1;
+        ctx.fillStyle = color;
+        x += w + 8;
+        i += 1;
+      }
+    }
+
+    function drawGate(gate) {
+      const y = roadY(gate.z);
+      if (y < view.horizon || y > view.h + 80 || gate.hit) return;
+      const s = roadScale(gate.z);
+      for (const op of gate.options) {
+        const x = laneX(op.lane, s);
+        const w = 116 * s;
+        const h = 72 * s;
+        const color = opColor(op);
+        ctx.fillStyle = color.replace(")", ",.82)").replace("rgb", "rgba");
+        ctx.strokeStyle = op.type === "sub" || op.type === "div" ? "#ffc1c1" : "#c9ffde";
+        ctx.lineWidth = Math.max(2, 4 * s);
+        ctx.beginPath();
+        roundRect(x - w / 2, y - h / 2, w, h, 8 * s);
+        ctx.fill();
+        ctx.stroke();
+
+        ctx.fillStyle = "#111318";
+        ctx.font = `900 ${Math.max(18, 34 * s)}px system-ui, sans-serif`;
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.fillText(opText(op), x, y);
+      }
+    }
+
+    function drawPlayer() {
+      const x = state.playerX;
+      const y = view.h * .8;
+      const barrels = Math.min(6, state.upgrades.barrels);
+      ctx.save();
+      ctx.translate(x, y);
+      softShadow("rgba(0,0,0,.55)", 18, 0, 10);
+      ctx.fillStyle = "rgba(0,0,0,.28)";
+      ctx.beginPath();
+      ctx.ellipse(0, 28, 54, 14, 0, 0, Math.PI * 2);
+      ctx.fill();
+      clearShadow();
+      ctx.strokeStyle = "#0f1116";
+      ctx.lineWidth = 3;
+      for (let i = 0; i < barrels; i += 1) {
+        const bx = (i - (barrels - 1) / 2) * 10;
+        ctx.fillStyle = linearFill(bx - 5, -48, bx + 5, -8, [
+          [0, "#eef5ff"],
+          [.35, "#9aa8ba"],
+          [.72, "#596574"],
+          [1, "#f7fbff"]
+        ]);
+        roundRect(bx - 5, -44, 10, 34, 3);
+        ctx.fill();
+        ctx.stroke();
+        ctx.fillStyle = "rgba(255,255,255,.75)";
+        roundRect(bx - 2, -41, 2, 24, 1);
+        ctx.fill();
+      }
+      softShadow("rgba(86,194,255,.28)", 14, 0, 6);
+      ctx.fillStyle = linearFill(-31, -18, 31, 23, [
+        [0, "#9de2ff"],
+        [.35, "#56c2ff"],
+        [.7, "#247aa6"],
+        [1, "#12324b"]
+      ]);
+      roundRect(-31, -16, 62, 38, 8);
+      ctx.fill();
+      clearShadow();
+      ctx.stroke();
+      ctx.fillStyle = linearFill(-20, 14, 30, 30, [
+        [0, "#2b3442"],
+        [1, "#0e1118"]
+      ]);
+      roundRect(8, 12, 26, 18, 5);
+      ctx.fill();
+      ctx.stroke();
+      ctx.fillStyle = radialFill(0, 3, 2, 14, [
+        [0, "#fff7bf"],
+        [.45, "#ffd166"],
+        [1, "#b97817"]
+      ]);
+      ctx.beginPath();
+      ctx.arc(0, 3, 12, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.stroke();
+      ctx.fillStyle = "rgba(255,255,255,.6)";
+      ctx.beginPath();
+      ctx.arc(-4, -1, 3, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = "#111318";
+      ctx.font = "900 15px system-ui, sans-serif";
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.fillText(state.mode === "boss" ? state.ammo : bulletCount(state.power), 0, 4);
+      ctx.restore();
+    }
+
+    function drawBoss() {
+      if (state.mode !== "boss") return;
+      const x = state.bossX;
+      const y = state.bossY;
+      const wobble = Math.sin(performance.now() / 140) * 5;
+      ctx.save();
+      ctx.fillStyle = "rgba(0,0,0,.32)";
+      ctx.beginPath();
+      ctx.ellipse(x, y + 78, 92, 24, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+      ctx.save();
+      ctx.translate(x, y + wobble);
+      softShadow("rgba(0,0,0,.65)", 22, 0, 10);
+      if (state.bossKind === "godzilla") drawGodzilla();
+      else if (state.bossKind === "mecha") drawMechaGodzilla();
+      else drawKong();
+      clearShadow();
+      ctx.restore();
+
+      const bw = Math.min(360, view.w * .58);
+      ctx.fillStyle = "rgba(0,0,0,.35)";
+      roundRect(x - bw / 2, y + 86, bw, 14, 7);
+      ctx.fill();
+      ctx.fillStyle = "#4bd17f";
+      roundRect(x - bw / 2, y + 86, bw * Math.max(0, state.bossHp / state.bossMax), 14, 7);
+      ctx.fill();
+      ctx.fillStyle = "#ffd166";
+      ctx.font = "900 20px system-ui, sans-serif";
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.fillText(state.bossName, x, y - 92);
+    }
+
+    function drawKong() {
+      ctx.strokeStyle = "#111318";
+      ctx.lineWidth = 4;
+      ctx.fillStyle = radialFill(-12, 8, 6, 78, [
+        [0, "#9a7658"],
+        [.45, "#5a4032"],
+        [1, "#241812"]
+      ]);
+      ctx.beginPath();
+      ctx.ellipse(0, 20, 58, 64, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.stroke();
+      ctx.fillStyle = radialFill(-10, -50, 4, 52, [
+        [0, "#9f7960"],
+        [.5, "#6d4f3d"],
+        [1, "#2c1e18"]
+      ]);
+      ctx.beginPath();
+      ctx.ellipse(0, -42, 45, 38, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.stroke();
+      ctx.fillStyle = linearFill(-76, -35, 82, 62, [
+        [0, "#8f6d55"],
+        [.5, "#604433"],
+        [1, "#2d1d16"]
+      ]);
+      ctx.beginPath();
+      ctx.ellipse(-62, 18, 24, 58, -.45, 0, Math.PI * 2);
+      ctx.ellipse(62, 18, 24, 58, .45, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.stroke();
+      ctx.fillStyle = radialFill(-8, -42, 2, 44, [
+        [0, "#f1c39b"],
+        [.55, "#c49a78"],
+        [1, "#7f5640"]
+      ]);
+      roundRect(-28, -38, 56, 36, 8);
+      ctx.fill();
+      ctx.stroke();
+      ctx.strokeStyle = "rgba(255,255,255,.18)";
+      ctx.lineWidth = 2;
+      for (let i = -34; i <= 34; i += 17) {
+        ctx.beginPath();
+        ctx.moveTo(i, -2);
+        ctx.quadraticCurveTo(i - 8, 20, i + 5, 52);
+        ctx.stroke();
+      }
+      ctx.fillStyle = "#111318";
+      ctx.beginPath();
+      ctx.arc(-16, -42, 5, 0, Math.PI * 2);
+      ctx.arc(16, -42, 5, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.lineWidth = 5;
+      ctx.beginPath();
+      ctx.moveTo(-20, -14);
+      ctx.lineTo(20, -14);
+      ctx.stroke();
+    }
+
+    function drawGodzilla() {
+      ctx.strokeStyle = "#111318";
+      ctx.lineWidth = 4;
+      ctx.fillStyle = radialFill(-12, -8, 6, 88, [
+        [0, "#66a49b"],
+        [.48, "#31544f"],
+        [1, "#132622"]
+      ]);
+      ctx.beginPath();
+      ctx.moveTo(-54, 66);
+      ctx.bezierCurveTo(-74, 10, -44, -48, 4, -68);
+      ctx.bezierCurveTo(58, -48, 74, 22, 44, 68);
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
+      ctx.fillStyle = radialFill(-18, -28, 0, 55, [
+        [0, "#e8fdff"],
+        [.4, "#56c2ff"],
+        [1, "#126b99"]
+      ]);
+      for (let i = 0; i < 5; i += 1) {
+        ctx.beginPath();
+        ctx.moveTo(-8 + i * 4, -70 + i * 26);
+        ctx.lineTo(-34, -54 + i * 26);
+        ctx.lineTo(-10, -42 + i * 26);
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+      }
+      ctx.fillStyle = radialFill(-9, -48, 2, 48, [
+        [0, "#75b6ab"],
+        [.55, "#3f7067"],
+        [1, "#17332f"]
+      ]);
+      ctx.beginPath();
+      ctx.ellipse(0, -42, 42, 32, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.stroke();
+      ctx.fillStyle = "#111318";
+      ctx.beginPath();
+      ctx.arc(-15, -47, 5, 0, Math.PI * 2);
+      ctx.arc(15, -47, 5, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = "#bff6ff";
+      ctx.lineWidth = 7;
+      ctx.beginPath();
+      ctx.moveTo(-20, -14);
+      ctx.quadraticCurveTo(0, -2, 22, -14);
+      ctx.stroke();
+    }
+
+    function drawMechaGodzilla() {
+      ctx.strokeStyle = "#111318";
+      ctx.lineWidth = 4;
+      ctx.fillStyle = linearFill(-56, -66, 58, 70, [
+        [0, "#f4f8fb"],
+        [.22, "#aeb8c2"],
+        [.56, "#66727f"],
+        [1, "#dce4eb"]
+      ]);
+      roundRect(-48, -56, 96, 116, 10);
+      ctx.fill();
+      ctx.stroke();
+      ctx.fillStyle = linearFill(-38, -88, 38, -36, [
+        [0, "#d9e2ea"],
+        [.5, "#7c8794"],
+        [1, "#39424c"]
+      ]);
+      roundRect(-38, -86, 76, 48, 8);
+      ctx.fill();
+      ctx.stroke();
+      ctx.fillStyle = radialFill(0, -62, 1, 26, [
+        [0, "#fff"],
+        [.35, "#ff8b8b"],
+        [1, "#f36b6b"]
+      ]);
+      ctx.beginPath();
+      ctx.arc(-16, -62, 6, 0, Math.PI * 2);
+      ctx.arc(16, -62, 6, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = radialFill(-10, 0, 0, 62, [
+        [0, "#e9fdff"],
+        [.45, "#56c2ff"],
+        [1, "#1e6890"]
+      ]);
+      for (let i = 0; i < 4; i += 1) {
+        ctx.beginPath();
+        ctx.moveTo(0, -34 + i * 24);
+        ctx.lineTo(-28, -22 + i * 24);
+        ctx.lineTo(0, -10 + i * 24);
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+      }
+      ctx.fillStyle = "#8b97a3";
+      roundRect(-78, -8, 28, 62, 8);
+      roundRect(50, -8, 28, 62, 8);
+      ctx.fill();
+      ctx.stroke();
+      ctx.strokeStyle = "#111318";
+      ctx.lineWidth = 5;
+      ctx.beginPath();
+      ctx.moveTo(-18, -42);
+      ctx.lineTo(18, -42);
+      ctx.stroke();
+    }
+
+    function drawBullets() {
+      for (const b of state.bullets) {
+        const t = 1 - Math.max(0, b.life);
+        const x = b.x + (b.tx - b.x) * t;
+        const y = b.y + (b.ty - b.y) * t;
+        ctx.fillStyle = "#ffd166";
+        ctx.beginPath();
+        ctx.arc(x, y, 5, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+
+    function drawAim() {
+      if (state.mode !== "boss") return;
+      ctx.strokeStyle = "rgba(255,209,102,.9)";
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.arc(state.aimX, state.aimY, 18, 0, Math.PI * 2);
+      ctx.moveTo(state.aimX - 28, state.aimY);
+      ctx.lineTo(state.aimX - 8, state.aimY);
+      ctx.moveTo(state.aimX + 8, state.aimY);
+      ctx.lineTo(state.aimX + 28, state.aimY);
+      ctx.moveTo(state.aimX, state.aimY - 28);
+      ctx.lineTo(state.aimX, state.aimY - 8);
+      ctx.moveTo(state.aimX, state.aimY + 8);
+      ctx.lineTo(state.aimX, state.aimY + 28);
+      ctx.stroke();
+    }
+
+    function drawEffects() {
+      for (const p of state.particles) {
+        ctx.globalAlpha = Math.max(0, p.life);
+        ctx.fillStyle = p.color;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.globalAlpha = 1;
+
+      for (const pop of state.popups) {
+        ctx.globalAlpha = Math.max(0, pop.life);
+        ctx.fillStyle = pop.color;
+        ctx.font = "900 34px system-ui, sans-serif";
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.fillText(pop.text, pop.x, pop.y);
+      }
+      ctx.globalAlpha = 1;
+    }
+
+    function drawFinish() {
+      if (state.mode !== "run") return;
+      const y = roadY(state.finishAt);
+      if (y < view.horizon || y > view.h + 50) return;
+      ctx.strokeStyle = "#ffd166";
+      ctx.lineWidth = 6;
+      ctx.beginPath();
+      ctx.moveTo(view.roadX + 22, y);
+      ctx.lineTo(view.roadX + view.roadW - 22, y);
+      ctx.stroke();
+      ctx.fillStyle = "#ffd166";
+      ctx.font = "900 22px system-ui, sans-serif";
+      ctx.textAlign = "center";
+      ctx.fillText(state.bossName, view.w / 2, y - 18);
+    }
+
+    function draw() {
+      drawRoad();
+      drawFinish();
+      for (const gate of state.gates) drawGate(gate);
+      drawBoss();
+      drawBullets();
+      drawPlayer();
+      drawAim();
+      drawEffects();
+    }
+
+    function loop(now) {
+      if (!state.running || state.paused) return;
+      const dt = Math.min(.033, (now - state.lastTime) / 1000 || 0);
+      state.lastTime = now;
+      update(dt);
+      draw();
+      if (state.running) requestAnimationFrame(loop);
+    }
+
+    function roundRect(x, y, w, h, r) {
+      const radius = Math.min(r, w / 2, h / 2);
+      ctx.beginPath();
+      ctx.moveTo(x + radius, y);
+      ctx.arcTo(x + w, y, x + w, y + h, radius);
+      ctx.arcTo(x + w, y + h, x, y + h, radius);
+      ctx.arcTo(x, y + h, x, y, radius);
+      ctx.arcTo(x, y, x + w, y, radius);
+      ctx.closePath();
+    }
+
+    function softShadow(color = "rgba(0,0,0,.45)", blur = 18, x = 0, y = 8) {
+      ctx.shadowColor = color;
+      ctx.shadowBlur = blur;
+      ctx.shadowOffsetX = x;
+      ctx.shadowOffsetY = y;
+    }
+
+    function clearShadow() {
+      ctx.shadowColor = "transparent";
+      ctx.shadowBlur = 0;
+      ctx.shadowOffsetX = 0;
+      ctx.shadowOffsetY = 0;
+    }
+
+    function linearFill(x0, y0, x1, y1, stops) {
+      const gradient = ctx.createLinearGradient(x0, y0, x1, y1);
+      for (const stop of stops) gradient.addColorStop(stop[0], stop[1]);
+      return gradient;
+    }
+
+    function radialFill(x, y, r0, r1, stops) {
+      const gradient = ctx.createRadialGradient(x - r1 * .28, y - r1 * .35, r0, x, y, r1);
+      for (const stop of stops) gradient.addColorStop(stop[0], stop[1]);
+      return gradient;
+    }
+
+    function syncUi() {
+      ui.power.textContent = bulletCount(state.power);
+      ui.ammo.textContent = state.ammo;
+      ui.life.textContent = state.life;
+      ui.coins.textContent = state.coins;
+      ui.level.textContent = state.level;
+      ui.boss.textContent = Math.ceil(state.bossHp);
+      ui.barrelCost.textContent = `${costs.barrels()} 金币`;
+      ui.damageCost.textContent = `${costs.damage()} 金币`;
+      ui.rateCost.textContent = `${costs.rate()} 金币`;
+      ui.buyBarrel.disabled = state.coins < costs.barrels();
+      ui.buyDamage.disabled = state.coins < costs.damage();
+      ui.buyRate.disabled = state.coins < costs.rate();
+      ui.barrelMeter.style.width = `${Math.min(100, state.upgrades.barrels * 14)}%`;
+      ui.damageMeter.style.width = `${Math.min(100, state.upgrades.damage * 16)}%`;
+      ui.rateMeter.style.width = `${Math.min(100, state.upgrades.rate * 14)}%`;
+    }
+
+    function buy(kind) {
+      const price = costs[kind]();
+      if (state.coins < price) return;
+      state.coins -= price;
+      state.upgrades[kind] += 1;
+      if (kind === "barrels") state.power = Math.max(state.power, state.upgrades.barrels);
+      syncUi();
+    }
+
+    function submitAnswer(event) {
+      event.preventDefault();
+      if (state.mode !== "boss" || !state.question) return;
+      const value = Number(ui.answer.value.trim());
+      if (!Number.isFinite(value)) {
+        ui.mathFeedback.textContent = "先输入一个数字答案。";
+        return;
+      }
+      if (Math.abs(value - state.question.answer) < .001) {
+        const wasFull = state.ammo >= 50;
+        state.ammo = Math.min(50, state.ammo + 10);
+        ui.mathFeedback.textContent = "答对了，获得 10 发子弹。";
+        state.popups.push({ x: view.w / 2, y: view.h * .52, text: "+10 发", color: "#4bd17f", life: 1, dy: -40 });
+        if (!wasFull && state.ammo >= 50) triggerHardQuestions();
+      } else {
+        state.life = Math.max(0, state.life - 10);
+        ui.mathFeedback.textContent = `答错了，正确答案是 ${state.question.answer}。`;
+        state.popups.push({ x: view.w / 2, y: view.h * .52, text: "-10 生命", color: "#f36b6b", life: 1, dy: -40 });
+      }
+      syncUi();
+      if (state.life <= 0) {
+        completeLevel(false);
+        return;
+      }
+      showQuestion(ui.mathFeedback.textContent);
+    }
+
+    function shootAt(x, y) {
+      if (state.mode !== "boss" || state.paused || state.ammo <= 0) {
+        if (state.mode === "boss") ui.mathFeedback.textContent = "没有子弹了，先答题补弹。";
+        return;
+      }
+      state.aimX = x;
+      state.aimY = y;
+      state.ammo -= 1;
+      playShootSound();
+      state.bullets.push({
+        x: state.playerX,
+        y: view.h * .78,
+        tx: x,
+        ty: y,
+        life: 1,
+        damage: 10
+      });
+      syncUi();
+      if (state.ammo === 0) ui.mathFeedback.textContent = "子弹用完了，答题再拿 10 发。";
+    }
+
+    window.addEventListener("resize", () => {
+      resize();
+      draw();
+    });
+
+    window.addEventListener("keydown", event => {
+      keys.add(event.key.toLowerCase());
+      if (event.key === " ") pauseGame();
+    });
+
+    window.addEventListener("keyup", event => {
+      keys.delete(event.key.toLowerCase());
+    });
+
+    canvas.addEventListener("pointerdown", event => {
+      canvas.setPointerCapture(event.pointerId);
+      movePointer(event);
+      if (state.mode === "boss") {
+        const rect = canvas.getBoundingClientRect();
+        shootAt(event.clientX - rect.left, event.clientY - rect.top);
+      }
+    });
+
+    canvas.addEventListener("pointermove", event => {
+      if (event.buttons || event.pointerType === "touch") movePointer(event);
+    });
+
+    function movePointer(event) {
+      const rect = canvas.getBoundingClientRect();
+      state.targetX = event.clientX - rect.left;
+    }
+
+    ui.start.addEventListener("click", () => {
+      if (state.paused) {
+        state.paused = false;
+        ui.overlay.classList.add("hidden");
+        state.lastTime = performance.now();
+        requestAnimationFrame(loop);
+      } else {
+        startGame();
+      }
+    });
+    ui.pause.addEventListener("click", pauseGame);
+    ui.buyBarrel.addEventListener("click", () => buy("barrels"));
+    ui.buyDamage.addEventListener("click", () => buy("damage"));
+    ui.buyRate.addEventListener("click", () => buy("rate"));
+    ui.mathPanel.addEventListener("submit", submitAnswer);
+
+    resize();
+    syncUi();
+    draw();
+  </script>
+</body>
+</html>
